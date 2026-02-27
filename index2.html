@@ -1,0 +1,3335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Local Services Finder</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #ec4899;
+            --accent: #06b6d4;
+            --success: #22c55e;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --dark: #1e293b;
+            --light: #f8fafc;
+            --gradient-1: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --gradient-2: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            --gradient-3: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            --shadow: 0 10px 40px rgba(0,0,0,0.1);
+            --shadow-lg: 0 20px 60px rgba(0,0,0,0.15);
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: var(--light);
+            color: var(--dark);
+            line-height: 1.6;
+            overflow-x: hidden;
+            min-height: 100vh;
+        }
+
+        /* Dynamic Background with Moving Images */
+        .bg-animation {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            overflow: hidden;
+        }
+
+        .floating-image {
+            position: absolute;
+            opacity: 0.15;
+            font-size: 3rem;
+            animation: float 20s infinite ease-in-out;
+        }
+
+        .floating-image:nth-child(1) { left: 10%; top: 20%; animation-delay: 0s; }
+        .floating-image:nth-child(2) { left: 80%; top: 30%; animation-delay: -5s; }
+        .floating-image:nth-child(3) { left: 20%; top: 70%; animation-delay: -10s; }
+        .floating-image:nth-child(4) { left: 70%; top: 80%; animation-delay: -15s; }
+        .floating-image:nth-child(5) { left: 50%; top: 10%; animation-delay: -8s; }
+        .floating-image:nth-child(6) { left: 30%; top: 50%; animation-delay: -12s; }
+        .floating-image:nth-child(7) { left: 90%; top: 60%; animation-delay: -3s; }
+        .floating-image:nth-child(8) { left: 5%; top: 90%; animation-delay: -7s; }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0) rotate(0deg); }
+            25% { transform: translateY(-30px) rotate(10deg); }
+            50% { transform: translateY(0) rotate(0deg); }
+            75% { transform: translateY(30px) rotate(-10deg); }
+        }
+
+        .bg-animation::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 1px, transparent 1px);
+            background-size: 50px 50px;
+            animation: moveBackground 20s linear infinite;
+        }
+
+        @keyframes moveBackground {
+            0% { transform: translate(0, 0); }
+            100% { transform: translate(50px, 50px); }
+        }
+
+        /* Language Selection Modal */
+        .language-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            backdrop-filter: blur(10px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+
+        .language-card {
+            background: white;
+            border-radius: 24px;
+            padding: 3rem;
+            text-align: center;
+            max-width: 500px;
+            width: 90%;
+            animation: scaleIn 0.5s ease;
+        }
+
+        @keyframes scaleIn {
+            from { transform: scale(0.8); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+
+        .language-options {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+
+        .language-btn {
+            padding: 1.5rem;
+            border: 2px solid #e2e8f0;
+            border-radius: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: white;
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .language-btn:hover {
+            border-color: var(--primary);
+            background: rgba(99, 102, 241, 0.05);
+            transform: translateY(-3px);
+        }
+
+        .language-btn.selected {
+            background: var(--gradient-1);
+            color: white;
+            border-color: transparent;
+        }
+
+        /* Glassmorphism Card */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 24px;
+            box-shadow: var(--shadow-lg);
+        }
+
+        /* Navigation */
+        nav {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            padding: 1rem 2rem;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            z-index: 1000;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 20px rgba(0,0,0,0.05);
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 800;
+            background: var(--gradient-1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .user-greeting {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: rgba(99, 102, 241, 0.1);
+            border-radius: 50px;
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        .user-avatar-nav {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid var(--primary);
+        }
+
+        .nav-btn {
+            padding: 0.5rem 1.5rem;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            background: transparent;
+            color: var(--dark);
+        }
+
+        .nav-btn:hover {
+            background: rgba(99, 102, 241, 0.1);
+            color: var(--primary);
+        }
+
+        .nav-btn.primary {
+            background: var(--gradient-1);
+            color: white;
+        }
+
+        .nav-btn.primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(99, 102, 241, 0.3);
+        }
+
+        .nav-btn.logout {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--danger);
+        }
+
+        .nav-btn.logout:hover {
+            background: var(--danger);
+            color: white;
+        }
+
+        /* Main Container */
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 100px 2rem 2rem;
+            min-height: 100vh;
+        }
+
+        /* Hero Section */
+        .hero {
+            text-align: center;
+            padding: 3rem 0;
+            color: white;
+        }
+
+        .hero h1 {
+            font-size: clamp(2rem, 5vw, 3.5rem);
+            font-weight: 800;
+            margin-bottom: 1rem;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            animation: fadeInUp 0.8s ease;
+        }
+
+        .hero p {
+            font-size: clamp(1rem, 2vw, 1.25rem);
+            opacity: 0.9;
+            max-width: 600px;
+            margin: 0 auto 2rem;
+            animation: fadeInUp 0.8s ease 0.2s both;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Role Selection Cards */
+        .role-selection {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 2rem;
+            margin: 2rem 0;
+        }
+
+        .role-card {
+            background: white;
+            border-radius: 24px;
+            padding: 2.5rem 2rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 2px solid transparent;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .role-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--gradient-1);
+            opacity: 0;
+            transition: opacity 0.4s ease;
+            z-index: 0;
+        }
+
+        .role-card:hover::before {
+            opacity: 0.05;
+        }
+
+        .role-card:hover {
+            transform: translateY(-10px);
+            border-color: var(--primary);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .role-icon {
+            width: 90px;
+            height: 90px;
+            background: var(--gradient-1);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1.5rem;
+            font-size: 2.5rem;
+            color: white;
+            position: relative;
+            z-index: 1;
+            transition: transform 0.3s ease;
+        }
+
+        .role-card:hover .role-icon {
+            transform: scale(1.1) rotate(5deg);
+        }
+
+        .role-card h3 {
+            font-size: 1.3rem;
+            margin-bottom: 0.5rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .role-card p {
+            color: #64748b;
+            position: relative;
+            z-index: 1;
+            font-size: 0.95rem;
+        }
+
+        /* Forms */
+        .form-container {
+            max-width: 900px;
+            margin: 2rem auto;
+            padding: 2.5rem;
+            display: none;
+            animation: slideIn 0.5s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .form-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .form-header h2 {
+            font-size: 1.8rem;
+            color: var(--dark);
+            margin-bottom: 0.5rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: var(--dark);
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 0.9rem;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            background: white;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+
+        .form-group input::placeholder {
+            color: #94a3b8;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+
+        /* Profile Photo Upload */
+        .profile-photo-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+
+        .profile-photo-preview {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+            color: var(--primary);
+            margin-bottom: 1rem;
+            overflow: hidden;
+            border: 4px solid white;
+            box-shadow: var(--shadow);
+        }
+
+        .profile-photo-preview img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .photo-upload-btn {
+            padding: 0.5rem 1.5rem;
+            background: var(--gradient-1);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .photo-upload-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(99, 102, 241, 0.3);
+        }
+
+        /* Gender Selection */
+        .gender-options {
+            display: flex;
+            gap: 1rem;
+            margin-top: 0.5rem;
+        }
+
+        .gender-option {
+            flex: 1;
+            padding: 1rem;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .gender-option:hover {
+            border-color: var(--primary);
+        }
+
+        .gender-option.selected {
+            background: rgba(99, 102, 241, 0.1);
+            border-color: var(--primary);
+        }
+
+        .gender-option input {
+            display: none;
+        }
+
+        /* Time Slots with Pricing */
+        .time-slots-container {
+            border: 2px solid #e2e8f0;
+            border-radius: 16px;
+            padding: 1rem;
+            margin-top: 0.5rem;
+        }
+
+        .slot-row {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 0.75rem;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .slot-row:last-child {
+            border-bottom: none;
+        }
+
+        .slot-checkbox {
+            width: 22px;
+            height: 22px;
+            cursor: pointer;
+            accent-color: var(--primary);
+        }
+
+        .slot-time {
+            flex: 1;
+            font-weight: 600;
+        }
+
+        .slot-price-input {
+            width: 120px;
+            padding: 0.5rem;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .slot-price-input:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        /* Subject Tags for Teachers */
+        .subject-tags-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+
+        .subject-tag {
+            padding: 0.5rem 1rem;
+            background: #f1f5f9;
+            border-radius: 50px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+
+        .subject-tag:hover {
+            background: rgba(99, 102, 241, 0.1);
+        }
+
+        .subject-tag.selected {
+            background: var(--primary);
+            color: white;
+        }
+
+        .custom-subject-input {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+
+        .custom-subject-input input {
+            flex: 1;
+        }
+
+        /* Buttons */
+        .btn {
+            width: 100%;
+            padding: 1rem;
+            border: none;
+            border-radius: 12px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 1rem;
+        }
+
+        .btn-primary {
+            background: var(--gradient-1);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(99, 102, 241, 0.3);
+        }
+
+        .btn-secondary {
+            background: #f1f5f9;
+            color: var(--dark);
+            margin-top: 0.5rem;
+        }
+
+        .btn-secondary:hover {
+            background: #e2e8f0;
+        }
+
+        .btn-back {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.5rem;
+            background: white;
+            border: 2px solid #e2e8f0;
+            border-radius: 50px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            margin-bottom: 1rem;
+        }
+
+        .btn-back:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+        /* Search Interface */
+        .search-interface {
+            display: none;
+            animation: fadeIn 0.5s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .search-bar {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 20px;
+            box-shadow: var(--shadow);
+            margin-bottom: 1.5rem;
+        }
+
+        .search-row {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            align-items: flex-end;
+        }
+
+        .search-field {
+            flex: 1;
+            min-width: 180px;
+        }
+
+        .search-field label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: #64748b;
+        }
+
+        .search-field select,
+        .search-field input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            font-size: 1rem;
+        }
+
+        .search-btn {
+            padding: 0.75rem 1.5rem;
+            background: var(--gradient-1);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            height: fit-content;
+        }
+
+        .search-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(99, 102, 241, 0.3);
+        }
+
+        .location-btn {
+            background: var(--gradient-3);
+        }
+
+        /* Worker Cards Grid */
+        .workers-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .worker-card {
+            background: white;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: var(--shadow);
+            transition: all 0.4s ease;
+            position: relative;
+        }
+
+        .worker-card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .worker-header {
+            background: var(--gradient-1);
+            padding: 1.5rem;
+            color: white;
+            position: relative;
+        }
+
+        .worker-avatar {
+            width: 70px;
+            height: 70px;
+            background: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            margin-bottom: 1rem;
+            border: 4px solid rgba(255,255,255,0.3);
+            overflow: hidden;
+        }
+
+        .worker-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .worker-name {
+            font-size: 1.2rem;
+            font-weight: 700;
+            margin-bottom: 0.25rem;
+        }
+
+        .worker-service {
+            opacity: 0.9;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .badges {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .distance-badge, .verified-badge {
+            background: rgba(255,255,255,0.2);
+            backdrop-filter: blur(10px);
+            padding: 0.4rem 0.8rem;
+            border-radius: 50px;
+            font-weight: 600;
+            font-size: 0.8rem;
+        }
+
+        .verified-badge {
+            background: rgba(34, 197, 94, 0.3);
+        }
+
+        .worker-body {
+            padding: 1.5rem;
+        }
+
+        .worker-info {
+            display: flex;
+            flex-direction: column;
+            gap: 0.6rem;
+            margin-bottom: 1rem;
+        }
+
+        .info-row {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            color: #64748b;
+            font-size: 0.9rem;
+        }
+
+        .info-icon {
+            width: 24px;
+            height: 24px;
+            background: rgba(99, 102, 241, 0.1);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--primary);
+            font-size: 0.85rem;
+            flex-shrink: 0;
+        }
+
+        .price-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            background: rgba(34, 197, 94, 0.1);
+            color: var(--success);
+            padding: 0.4rem 0.8rem;
+            border-radius: 50px;
+            font-weight: 700;
+            font-size: 1rem;
+        }
+
+        .rating-display {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .stars {
+            color: #fbbf24;
+        }
+
+        .review-count {
+            color: #94a3b8;
+            font-size: 0.85rem;
+        }
+
+        .worker-actions {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+
+        .action-btn {
+            flex: 1;
+            padding: 0.6rem;
+            border: none;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.4rem;
+            text-decoration: none;
+            font-size: 0.85rem;
+        }
+
+        .btn-call {
+            background: #f0fdf4;
+            color: var(--success);
+        }
+
+        .btn-call:hover {
+            background: var(--success);
+            color: white;
+        }
+
+        .btn-whatsapp {
+            background: #dcfce7;
+            color: #16a34a;
+        }
+
+        .btn-whatsapp:hover {
+            background: #16a34a;
+            color: white;
+        }
+
+        .btn-book {
+            background: var(--gradient-1);
+            color: white;
+            flex: 2;
+        }
+
+        .btn-book:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(99, 102, 241, 0.3);
+        }
+
+        .btn-book:disabled {
+            background: #cbd5e1;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Modals */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            backdrop-filter: blur(5px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            padding: 1rem;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+            opacity: 1;
+        }
+
+        .modal {
+            background: white;
+            border-radius: 24px;
+            padding: 2rem;
+            max-width: 550px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            transform: scale(0.9);
+            transition: transform 0.3s ease;
+        }
+
+        .modal-overlay.active .modal {
+            transform: scale(1);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .modal-header h3 {
+            font-size: 1.4rem;
+            color: var(--dark);
+        }
+
+        .close-btn {
+            width: 36px;
+            height: 36px;
+            border: none;
+            background: #f1f5f9;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1.2rem;
+            transition: all 0.3s ease;
+        }
+
+        .close-btn:hover {
+            background: #e2e8f0;
+            transform: rotate(90deg);
+        }
+
+        /* Review Modal */
+        .review-stars {
+            display: flex;
+            gap: 0.5rem;
+            justify-content: center;
+            margin: 1rem 0;
+        }
+
+        .review-star {
+            font-size: 2.5rem;
+            cursor: pointer;
+            color: #e2e8f0;
+            transition: all 0.2s ease;
+        }
+
+        .review-star:hover,
+        .review-star.active {
+            color: #fbbf24;
+            transform: scale(1.2);
+        }
+
+        /* Dashboard */
+        .dashboard {
+            display: none;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .dashboard-header {
+            background: white;
+            padding: 2rem;
+            border-radius: 20px;
+            margin-bottom: 2rem;
+            box-shadow: var(--shadow);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 16px;
+            box-shadow: var(--shadow);
+            text-align: center;
+            transition: transform 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 800;
+            background: var(--gradient-1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            color: #64748b;
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .bookings-list {
+            background: white;
+            border-radius: 20px;
+            padding: 1.5rem;
+            box-shadow: var(--shadow);
+        }
+
+        .booking-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem;
+            border-bottom: 1px solid #e2e8f0;
+            transition: background 0.3s ease;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .booking-item:hover {
+            background: #f8fafc;
+            border-radius: 12px;
+        }
+
+        .booking-item:last-child {
+            border-bottom: none;
+        }
+
+        .booking-info h4 {
+            color: var(--dark);
+            margin-bottom: 0.25rem;
+        }
+
+        .booking-info p {
+            color: #64748b;
+            font-size: 0.85rem;
+        }
+
+        .booking-status {
+            padding: 0.4rem 1rem;
+            border-radius: 50px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .status-confirmed {
+            background: rgba(34, 197, 94, 0.1);
+            color: var(--success);
+        }
+
+        .status-pending {
+            background: rgba(245, 158, 11, 0.1);
+            color: var(--warning);
+        }
+
+        .status-completed {
+            background: rgba(99, 102, 241, 0.1);
+            color: var(--primary);
+        }
+
+        .booking-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .booking-actions button {
+            padding: 0.4rem 1rem;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.85rem;
+            transition: all 0.3s ease;
+        }
+
+        /* Admin Interface */
+        .admin-interface {
+            display: none;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .admin-tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .admin-tab {
+            padding: 0.75rem 1.5rem;
+            background: white;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .admin-tab:hover {
+            border-color: var(--primary);
+        }
+
+        .admin-tab.active {
+            background: var(--gradient-1);
+            color: white;
+            border-color: transparent;
+        }
+
+        .admin-table {
+            background: white;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: var(--shadow);
+        }
+
+        .admin-table table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .admin-table th,
+        .admin-table td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .admin-table th {
+            background: #f8fafc;
+            font-weight: 600;
+            color: #64748b;
+            text-transform: uppercase;
+            font-size: 0.8rem;
+            letter-spacing: 1px;
+        }
+
+        .admin-table tr:hover {
+            background: #f8fafc;
+        }
+
+        .delete-btn {
+            padding: 0.4rem 1rem;
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--danger);
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .delete-btn:hover {
+            background: var(--danger);
+            color: white;
+        }
+
+        /* Worker Dashboard */
+        .worker-dashboard {
+            display: none;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .earnings-card {
+            background: var(--gradient-1);
+            color: white;
+            padding: 2rem;
+            border-radius: 20px;
+            margin-bottom: 1.5rem;
+        }
+
+        .earnings-amount {
+            font-size: 3rem;
+            font-weight: 800;
+        }
+
+        .availability-toggle {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem;
+            background: white;
+            border-radius: 12px;
+            margin-bottom: 1rem;
+        }
+
+        .toggle-switch {
+            width: 60px;
+            height: 32px;
+            background: #e2e8f0;
+            border-radius: 16px;
+            position: relative;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .toggle-switch.active {
+            background: var(--success);
+        }
+
+        .toggle-switch::after {
+            content: '';
+            position: absolute;
+            width: 28px;
+            height: 28px;
+            background: white;
+            border-radius: 50%;
+            top: 2px;
+            left: 2px;
+            transition: all 0.3s ease;
+        }
+
+        .toggle-switch.active::after {
+            left: 30px;
+        }
+
+        /* Location Map Placeholder */
+        .map-container {
+            width: 100%;
+            height: 180px;
+            background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--primary);
+            font-weight: 600;
+            margin-bottom: 1rem;
+            position: relative;
+            overflow: hidden;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .map-container:hover {
+            transform: scale(1.02);
+        }
+
+        .map-container::before {
+            content: '';
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background: var(--primary);
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.5); opacity: 0.5; }
+        }
+
+        /* Toast Notifications */
+        .toast-container {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            z-index: 3000;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .toast {
+            background: white;
+            padding: 1rem 1.5rem;
+            border-radius: 12px;
+            box-shadow: var(--shadow-lg);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            animation: slideInRight 0.3s ease;
+            min-width: 280px;
+        }
+
+        @keyframes slideInRight {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .toast.success {
+            border-left: 4px solid var(--success);
+        }
+
+        .toast.error {
+            border-left: 4px solid var(--danger);
+        }
+
+        .toast.info {
+            border-left: 4px solid var(--primary);
+        }
+
+        /* Filter Tags */
+        .filter-tags {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin-bottom: 1rem;
+        }
+
+        .filter-tag {
+            padding: 0.5rem 1rem;
+            background: #f1f5f9;
+            border-radius: 50px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .filter-tag:hover,
+        .filter-tag.active {
+            background: var(--primary);
+            color: white;
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 3rem 2rem;
+            color: #64748b;
+        }
+
+        .empty-state-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+
+        /* Verification Badge */
+        .verification-status {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            border-radius: 50px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .verification-status.verified {
+            background: rgba(34, 197, 94, 0.1);
+            color: var(--success);
+        }
+
+        .verification-status.pending {
+            background: rgba(245, 158, 11, 0.1);
+            color: var(--warning);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container {
+                padding: 90px 1rem 1rem;
+            }
+            
+            .hero h1 {
+                font-size: 1.8rem;
+            }
+            
+            .nav-links {
+                gap: 0.5rem;
+            }
+            
+            .nav-btn {
+                padding: 0.4rem 0.8rem;
+                font-size: 0.85rem;
+            }
+            
+            .workers-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .search-row {
+                flex-direction: column;
+            }
+            
+            .form-container {
+                padding: 1.5rem;
+            }
+            
+            .modal {
+                padding: 1.5rem;
+            }
+            
+            .admin-table {
+                overflow-x: auto;
+            }
+            
+            .admin-table table {
+                min-width: 600px;
+            }
+        }
+
+        /* Loading Animation */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Fake Profile Warning */
+        .warning-banner {
+            background: rgba(245, 158, 11, 0.1);
+            border: 1px solid var(--warning);
+            border-radius: 12px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .warning-banner p {
+            font-size: 0.9rem;
+            color: var(--dark);
+        }
+
+        /* Section Headers */
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .section-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--dark);
+        }
+
+        /* Hidden */
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+    <!-- Dynamic Background -->
+    <div class="bg-animation">
+        <div class="floating-image">⚡</div>
+        <div class="floating-image">🔧</div>
+        <div class="floating-image">🚿</div>
+        <div class="floating-image">📚</div>
+        <div class="floating-image">🎨</div>
+        <div class="floating-image">🧹</div>
+        <div class="floating-image">🌱</div>
+        <div class="floating-image">🪚</div>
+    </div>
+
+   
+
+    <!-- Navigation -->
+    <nav>
+        <div class="logo">
+            <span>🔧</span>
+            <span>SmartLocal</span>
+        </div>
+        <div class="nav-links">
+            <div id="userGreeting" class="user-greeting hidden">
+                <img id="navUserAvatar" class="user-avatar-nav" src="" alt="">
+                <span id="navUserName">User</span>
+            </div>
+            <button class="nav-btn" onclick="showHome()">Home</button>
+            <button id="dashboardBtn" class="nav-btn hidden" onclick="showDashboard()">Dashboard</button>
+            <button id="authBtn" class="nav-btn primary" onclick="showAuthModal()">Login / Register</button>
+            <button id="logoutBtn" class="nav-btn logout hidden" onclick="logout()">Logout</button>
+        </div>
+    </nav>
+
+    <div class="container">
+        <!-- Hero Section -->
+        <div id="heroSection" class="hero">
+            <h1 id="heroTitle">Find Trusted Local Services</h1>
+            <p id="heroSubtitle">Connect with verified professionals in your area. Book appointments, compare prices, and get quality service at your doorstep.</p>
+        </div>
+
+        <!-- Role Selection -->
+        <div id="roleSelection" class="role-selection">
+            <div class="role-card" onclick="showWorkerForm()">
+                <div class="role-icon">👨‍🔧</div>
+                <h3>I'm a Service Provider</h3>
+                <p>Register your services, manage bookings, and grow your business with our platform.</p>
+            </div>
+            <div class="role-card" onclick="showUserSearch()">
+                <div class="role-icon" style="background: var(--gradient-2);">🔍</div>
+                <h3>I'm Looking for Services</h3>
+                <p>Find reliable workers near you. Compare prices, read reviews, and book instantly.</p>
+            </div>
+        </div>
+
+        <!-- Auth Modal Trigger -->
+        <div id="authModal" class="modal-overlay">
+            <div class="modal">
+                <div class="modal-header">
+                    <h3 id="authModalTitle">Login / Register</h3>
+                    <button class="close-btn" onclick="closeAuthModal()">×</button>
+                </div>
+                <div id="authContent">
+                    <div class="form-group">
+                        <label>Enter Your Name</label>
+                        <input type="text" id="authName" placeholder="Enter your full name">
+                    </div>
+                    <div class="form-group">
+                        <label>Phone Number</label>
+                        <input type="tel" id="authPhone" placeholder="+91 9876543210">
+                    </div>
+                    <div class="form-group">
+                        <label>Select Role</label>
+                        <select id="authRole">
+                            <option value="user">Customer</option>
+                            <option value="worker">Service Provider</option>
+                            <option value="admin">Admin</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-primary" onclick="handleAuth()">Continue</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Worker Registration Form -->
+        <div id="workerForm" class="glass-card form-container">
+            <button class="btn-back" onclick="showHome()">← Back to Home</button>
+            <div class="form-header">
+                <h2>Register as Service Provider</h2>
+                <p>Join our network of trusted professionals</p>
+            </div>
+
+            <!-- Warning Banner -->
+            <div class="warning-banner">
+                <span style="font-size: 1.5rem;">⚠️</span>
+                <p><strong>Important:</strong> Providing false information will result in account suspension. Your identity will be verified.</p>
+            </div>
+
+            <form id="workerRegistrationForm" onsubmit="registerWorker(event)">
+                <!-- Profile Photo Section -->
+                <div class="profile-photo-section">
+                    <div class="profile-photo-preview" id="profilePhotoPreview">
+                        👤
+                    </div>
+                    <input type="file" id="profilePhoto" accept="image/*" style="display:none" onchange="handlePhotoUpload(event)">
+                    <button type="button" class="photo-upload-btn" onclick="document.getElementById('profilePhoto').click()">
+                        📷 Add Profile Photo (Optional)
+                    </button>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Full Name *</label>
+                        <input type="text" id="workerName" required placeholder="Enter your full name">
+                    </div>
+                    <div class="form-group">
+                        <label>Phone Number *</label>
+                        <input type="tel" id="workerPhone" required placeholder="+91 9876543210">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Gender *</label>
+                        <div class="gender-options">
+                            <label class="gender-option" onclick="selectGender(this, 'male')">
+                                <input type="radio" name="gender" value="male">
+                                👨 Male
+                            </label>
+                            <label class="gender-option" onclick="selectGender(this, 'female')">
+                                <input type="radio" name="gender" value="female">
+                                👩 Female
+                            </label>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Years of Experience</label>
+                        <input type="number" id="experience" placeholder="e.g., 5" min="0">
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Service Type *</label>
+                        <select id="serviceType" required onchange="handleServiceTypeChange()">
+                            <option value="">Select Service</option>
+                            <option value="electrician">Electrician</option>
+                            <option value="plumber">Plumber</option>
+                            <option value="teacher">Teacher/Tutor</option>
+                            <option value="mechanic">Mechanic</option>
+                            <option value="cleaner">Cleaner</option>
+                            <option value="carpenter">Carpenter</option>
+                            <option value="painter">Painter</option>
+                            <option value="gardener">Gardener</option>
+                            <option value="driver">Driver</option>
+                            <option value="chef">Chef/Cook</option>
+                            <option value="other">Other (Specify)</option>
+                        </select>
+                        <div id="otherServiceContainer" class="hidden" style="margin-top: 0.5rem;">
+                            <input type="text" id="otherService" placeholder="Enter your service type">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Base Service Cost (₹/hour) *</label>
+                        <input type="number" id="serviceCost" required placeholder="e.g., 500" min="50">
+                    </div>
+                </div>
+
+                <!-- Teacher-specific fields -->
+                <div id="teacherFields" class="hidden">
+                    <div class="form-group">
+                        <label>Subjects You Teach</label>
+                        <div class="subject-tags-container" id="subjectTags">
+                            <span class="subject-tag" onclick="toggleSubject(this)">Mathematics</span>
+                            <span class="subject-tag" onclick="toggleSubject(this)">Science</span>
+                            <span class="subject-tag" onclick="toggleSubject(this)">English</span>
+                            <span class="subject-tag" onclick="toggleSubject(this)">Hindi</span>
+                            <span class="subject-tag" onclick="toggleSubject(this)">Social Studies</span>
+                            <span class="subject-tag" onclick="toggleSubject(this)">Computer Science</span>
+                            <span class="subject-tag" onclick="toggleSubject(this)">Physics</span>
+                            <span class="subject-tag" onclick="toggleSubject(this)">Chemistry</span>
+                            <span class="subject-tag" onclick="toggleSubject(this)">Biology</span>
+                        </div>
+                        <div class="custom-subject-input">
+                            <input type="text" id="customSubject" placeholder="Add custom subject">
+                            <button type="button" class="btn btn-secondary" style="width:auto; padding:0.5rem 1rem; margin:0;" onclick="addCustomSubject()">Add</button>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Teaching Mode</label>
+                        <select id="teachingMode">
+                            <option value="both">Both Online & Offline</option>
+                            <option value="online">Online Only</option>
+                            <option value="offline">Offline/Home Visit Only</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Address *</label>
+                    <input type="text" id="workerAddress" required placeholder="Enter your complete address">
+                </div>
+
+                <div class="form-group">
+                    <label>Available Time Slots & Pricing *</label>
+                    <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 0.5rem;">Select slots and set price for each slot (in ₹)</p>
+                    <div class="time-slots-container" id="timeSlotsContainer">
+                        <!-- Slots will be generated here -->
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Current Location (GPS) *</label>
+                    <div class="map-container" id="locationMap" onclick="getCurrentLocation()">
+                        <span>📍 Click to capture location</span>
+                    </div>
+                    <input type="hidden" id="latitude">
+                    <input type="hidden" id="longitude">
+                    <p style="font-size: 0.8rem; color: #64748b; margin-top: 0.5rem;">Your exact location helps customers find you nearby</p>
+                </div>
+
+                <div class="form-group">
+                    <label>Bio/Description</label>
+                    <textarea id="workerBio" rows="3" placeholder="Tell customers about yourself and your expertise..."></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label>ID Proof (Aadhaar/PAN) - For Verification</label>
+                    <input type="file" id="idProof" accept="image/*,.pdf">
+                    <p style="font-size: 0.8rem; color: #64748b; margin-top: 0.5rem;">Required for verification. Your information is kept confidential.</p>
+                </div>
+
+                <button type="submit" class="btn btn-primary">Register as Provider</button>
+            </form>
+        </div>
+
+        <!-- User Search Interface -->
+        <div id="userSearch" class="search-interface">
+            <button class="btn-back" onclick="showHome()">← Back to Home</button>
+            
+            <div class="glass-card search-bar">
+                <div class="search-row">
+                    <div class="search-field">
+                        <label>Service Type</label>
+                        <select id="searchServiceType">
+                            <option value="all">All Services</option>
+                            <option value="electrician">Electrician</option>
+                            <option value="plumber">Plumber</option>
+                            <option value="teacher">Teacher/Tutor</option>
+                            <option value="mechanic">Mechanic</option>
+                            <option value="cleaner">Cleaner</option>
+                            <option value="carpenter">Carpenter</option>
+                            <option value="painter">Painter</option>
+                            <option value="gardener">Gardener</option>
+                            <option value="driver">Driver</option>
+                            <option value="chef">Chef/Cook</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                    <div class="search-field">
+                        <label>Your Location</label>
+                        <input type="text" id="userLocationInput" placeholder="Enter your area or use GPS" readonly>
+                    </div>
+                    <div class="search-field">
+                        <label>Max Distance (km)</label>
+                        <input type="number" id="maxDistance" value="10" min="1" max="50">
+                    </div>
+                    <div class="search-field">
+                        <label>Sort By</label>
+                        <select id="sortBy">
+                            <option value="distance">Nearest First</option>
+                            <option value="price_low">Price: Low to High</option>
+                            <option value="price_high">Price: High to Low</option>
+                            <option value="rating">Highest Rated</option>
+                        </select>
+                    </div>
+                    <div class="search-field" style="display: flex; gap: 0.5rem; align-items: flex-end;">
+                        <button class="search-btn" onclick="searchWorkers()">🔍 Search</button>
+                        <button class="search-btn location-btn" onclick="getUserLocation()">📍 GPS</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="filter-tags">
+                <div class="filter-tag active" onclick="filterByPrice('all')">All Prices</div>
+                <div class="filter-tag" onclick="filterByPrice('low')">Under ₹500</div>
+                <div class="filter-tag" onclick="filterByPrice('mid')">₹500 - ₹1000</div>
+                <div class="filter-tag" onclick="filterByPrice('high')">Above ₹1000</div>
+            </div>
+
+            <div id="searchResults" class="workers-grid">
+                <!-- Results will be populated here -->
+            </div>
+        </div>
+
+        <!-- User Dashboard -->
+        <div id="userDashboard" class="dashboard">
+            <div class="dashboard-header">
+                <div>
+                    <h2>Welcome, <span id="userDisplayName">User</span>! 👋</h2>
+                    <p style="color: #64748b;">Manage your bookings and activity</p>
+                </div>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-value" id="userTotalBookings">0</div>
+                    <div class="stat-label">Total Bookings</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="userUpcoming">0</div>
+                    <div class="stat-label">Upcoming</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="userCompleted">0</div>
+                    <div class="stat-label">Completed</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="userFavorites">0</div>
+                    <div class="stat-label">Favorites</div>
+                </div>
+            </div>
+
+            <div class="bookings-list">
+                <div class="section-header">
+                    <h3 class="section-title">Recent Bookings</h3>
+                </div>
+                <div id="userBookingsList">
+                    <!-- Bookings will be populated here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Worker Dashboard -->
+        <div id="workerDashboard" class="worker-dashboard">
+            <div class="dashboard-header">
+                <div>
+                    <h2>Welcome, <span id="workerDisplayName">Worker</span>! 👋</h2>
+                    <p style="color: #64748b;">Manage your services and bookings</p>
+                </div>
+                <div class="availability-toggle">
+                    <span>Available for Work</span>
+                    <div class="toggle-switch active" id="availabilityToggle" onclick="toggleAvailability()"></div>
+                </div>
+            </div>
+
+            <div class="earnings-card">
+                <p style="opacity: 0.8; margin-bottom: 0.5rem;">Total Earnings</p>
+                <div class="earnings-amount">₹<span id="workerEarnings">0</span></div>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-value" id="workerTotalBookings">0</div>
+                    <div class="stat-label">Total Bookings</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="workerTodayBookings">0</div>
+                    <div class="stat-label">Today's Bookings</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="workerRating">0.0</div>
+                    <div class="stat-label">Rating</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="workerReviews">0</div>
+                    <div class="stat-label">Reviews</div>
+                </div>
+            </div>
+
+            <div class="bookings-list">
+                <div class="section-header">
+                    <h3 class="section-title">Upcoming Appointments</h3>
+                    <button class="btn btn-secondary" style="width:auto; padding:0.5rem 1rem; margin:0;" onclick="editWorkerProfile()">Edit Profile</button>
+                </div>
+                <div id="workerBookingsList">
+                    <!-- Worker bookings will be populated here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Admin Interface -->
+        <div id="adminInterface" class="admin-interface">
+            <div class="dashboard-header">
+                <div>
+                    <h2>Admin Dashboard 🛡️</h2>
+                    <p style="color: #64748b;">Manage users, workers, and platform activity</p>
+                </div>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-value" id="adminTotalUsers">0</div>
+                    <div class="stat-label">Total Users</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="adminTotalWorkers">0</div>
+                    <div class="stat-label">Service Providers</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="adminTotalBookings">0</div>
+                    <div class="stat-label">Total Bookings</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="adminPendingVerifications">0</div>
+                    <div class="stat-label">Pending Verifications</div>
+                </div>
+            </div>
+
+            <div class="admin-tabs">
+                <div class="admin-tab active" onclick="showAdminTab('workers')">Service Providers</div>
+                <div class="admin-tab" onclick="showAdminTab('users')">Users</div>
+                <div class="admin-tab" onclick="showAdminTab('bookings')">Bookings</div>
+                <div class="admin-tab" onclick="showAdminTab('reviews')">Reviews</div>
+            </div>
+
+            <div class="admin-table">
+                <table id="adminTable">
+                    <thead>
+                        <tr id="adminTableHeader">
+                            <!-- Dynamic headers -->
+                        </tr>
+                    </thead>
+                    <tbody id="adminTableBody">
+                        <!-- Dynamic content -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Booking Modal -->
+    <div id="bookingModal" class="modal-overlay" onclick="closeBookingModal(event)">
+        <div class="modal" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h3>Book Service</h3>
+                <button class="close-btn" onclick="closeBookingModal()">×</button>
+            </div>
+            <div id="bookingModalContent">
+                <!-- Dynamic content -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Review Modal -->
+    <div id="reviewModal" class="modal-overlay">
+        <div class="modal" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h3>Rate & Review</h3>
+                <button class="close-btn" onclick="closeReviewModal()">×</button>
+            </div>
+            <div id="reviewModalContent">
+                <p style="text-align: center; margin-bottom: 1rem;">How was your experience?</p>
+                <div class="review-stars" id="reviewStars">
+                    <span class="review-star" onclick="setRating(1)">★</span>
+                    <span class="review-star" onclick="setRating(2)">★</span>
+                    <span class="review-star" onclick="setRating(3)">★</span>
+                    <span class="review-star" onclick="setRating(4)">★</span>
+                    <span class="review-star" onclick="setRating(5)">★</span>
+                </div>
+                <div class="form-group">
+                    <label>Your Review</label>
+                    <textarea id="reviewText" rows="4" placeholder="Share your experience..."></textarea>
+                </div>
+                <button class="btn btn-primary" onclick="submitReview()">Submit Review</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script>
+        // Data Store
+        let workers = JSON.parse(localStorage.getItem('workers')) || [];
+        let users = JSON.parse(localStorage.getItem('users')) || [];
+        let bookings = JSON.parse(localStorage.getItem('bookings')) || [];
+        let reviews = JSON.parse(localStorage.getItem('reviews')) || [];
+        let currentUser = JSON.parse(localStorage.getItem('currentUser')) || null;
+        let userLocation = null;
+        let selectedLanguage = localStorage.getItem('language') || null;
+        let currentRating = 0;
+        let currentReviewBooking = null;
+
+        // Initialize demo data if empty
+        if (workers.length === 0) {
+            workers = [
+                {
+                    id: 1,
+                    name: "Rajesh Kumar",
+                    phone: "+919876543210",
+                    service: "electrician",
+                    cost: 400,
+                    address: "Sector 15, Noida, UP",
+                    latitude: 28.5843,
+                    longitude: 77.3154,
+                    slots: {
+                        "09:00 AM": { available: true, price: 400 },
+                        "10:00 AM": { available: true, price: 450 },
+                        "11:00 AM": { available: false, price: 400 },
+                        "02:00 PM": { available: true, price: 500 },
+                        "03:00 PM": { available: true, price: 500 },
+                        "04:00 PM": { available: true, price: 450 }
+                    },
+                    rating: 4.8,
+                    reviews: 124,
+                    gender: "male",
+                    experience: 8,
+                    verified: true,
+                    available: true,
+                    bio: "Experienced electrician with 8 years of expertise in residential and commercial wiring.",
+                    photo: null
+                },
+                {
+                    id: 2,
+                    name: "Priya Sharma",
+                    phone: "+919876543211",
+                    service: "plumber",
+                    cost: 350,
+                    address: "Connaught Place, Delhi",
+                    latitude: 28.6315,
+                    longitude: 77.2167,
+                    slots: {
+                        "09:00 AM": { available: true, price: 350 },
+                        "10:00 AM": { available: true, price: 350 },
+                        "11:00 AM": { available: true, price: 400 },
+                        "02:00 PM": { available: false, price: 350 },
+                        "03:00 PM": { available: true, price: 350 },
+                        "04:00 PM": { available: true, price: 400 }
+                    },
+                    rating: 4.9,
+                    reviews: 89,
+                    gender: "female",
+                    experience: 6,
+                    verified: true,
+                    available: true,
+                    bio: "Professional plumber specializing in leak repairs and bathroom installations.",
+                    photo: null
+                },
+                {
+                    id: 3,
+                    name: "Amit Verma",
+                    phone: "+919876543212",
+                    service: "teacher",
+                    cost: 300,
+                    address: "Dwarka, Delhi",
+                    latitude: 28.5921,
+                    longitude: 77.0460,
+                    slots: {
+                        "09:00 AM": { available: true, price: 300 },
+                        "10:00 AM": { available: true, price: 350 },
+                        "11:00 AM": { available: true, price: 350 },
+                        "02:00 PM": { available: true, price: 300 },
+                        "03:00 PM": { available: true, price: 300 },
+                        "04:00 PM": { available: false, price: 350 }
+                    },
+                    rating: 4.7,
+                    reviews: 56,
+                    gender: "male",
+                    experience: 5,
+                    verified: true,
+                    available: true,
+                    bio: "Math and Science tutor for classes 6-12. B.Ed qualified with excellent track record.",
+                    subjects: ["Mathematics", "Science", "Physics"],
+                    teachingMode: "both",
+                    photo: null
+                },
+                {
+                    id: 4,
+                    name: "Sunita Devi",
+                    phone: "+919876543213",
+                    service: "cleaner",
+                    cost: 250,
+                    address: "Rohini, Delhi",
+                    latitude: 28.7406,
+                    longitude: 77.0690,
+                    slots: {
+                        "08:00 AM": { available: true, price: 250 },
+                        "09:00 AM": { available: true, price: 250 },
+                        "10:00 AM": { available: false, price: 250 },
+                        "11:00 AM": { available: true, price: 300 },
+                        "02:00 PM": { available: true, price: 250 },
+                        "03:00 PM": { available: true, price: 250 }
+                    },
+                    rating: 4.6,
+                    reviews: 203,
+                    gender: "female",
+                    experience: 4,
+                    verified: true,
+                    available: true,
+                    bio: "Professional home cleaning and deep cleaning services.",
+                    photo: null
+                },
+                {
+                    id: 5,
+                    name: "Mohammad Ali",
+                    phone: "+919876543214",
+                    service: "mechanic",
+                    cost: 500,
+                    address: "Lajpat Nagar, Delhi",
+                    latitude: 28.5670,
+                    longitude: 77.2432,
+                    slots: {
+                        "09:00 AM": { available: true, price: 500 },
+                        "10:00 AM": { available: true, price: 550 },
+                        "11:00 AM": { available: true, price: 500 },
+                        "02:00 PM": { available: false, price: 500 },
+                        "03:00 PM": { available: true, price: 500 },
+                        "04:00 PM": { available: true, price: 550 }
+                    },
+                    rating: 4.5,
+                    reviews: 67,
+                    gender: "male",
+                    experience: 12,
+                    verified: true,
+                    available: true,
+                    bio: "Expert in car and bike repairs. AC mechanic specialist.",
+                    photo: null
+                }
+            ];
+            localStorage.setItem('workers', JSON.stringify(workers));
+        }
+
+        // Language translations
+        const translations = {
+            en: {
+                heroTitle: "Find Trusted Local Services",
+                heroSubtitle: "Connect with verified professionals in your area. Book appointments, compare prices, and get quality service at your doorstep.",
+                searchPlaceholder: "Search for services..."
+            },
+            hi: {
+                heroTitle: "विश्वसनीय स्थानीय सेवाएं खोजें",
+                heroSubtitle: "अपने क्षेत्र में सत्यापित पेशेवरों से जुड़ें। अपॉइंटमेंट बुक करें, कीमतों की तुलना करें।",
+                searchPlaceholder: "सेवाएं खोजें..."
+            },
+            te: {
+                heroTitle: "విశ్వసనీయ స్థానిక సేవలను కనుగొనండి",
+                heroSubtitle: "మీ ప్రాంతంలో నిర్ధారించబడిన నిపుణులతో కనెక్ట్ అవ్వండి.",
+                searchPlaceholder: "సేవల కోసం వెతకండి..."
+            },
+            ta: {
+                heroTitle: "நம்பகமான உள்ளூர் சேவைகளைக் கண்டறியவும்",
+                heroSubtitle: "உங்கள் பகுதியில் சரிபார்க்கப்பட்ட நிபுணர்களுடன் இணைக்கவும்.",
+                searchPlaceholder: "சேவைகளைத் தேடுங்கள்..."
+            }
+        };
+
+        // Initialize app
+        document.addEventListener('DOMContentLoaded', () => {
+            // Check language
+            if (!selectedLanguage) {
+                document.getElementById('languageModal').style.display = 'flex';
+            } else {
+                document.getElementById('languageModal').style.display = 'none';
+                applyLanguage();
+            }
+            
+            // Initialize time slots for worker form
+            initializeTimeSlots();
+            
+            // Check if user is logged in
+            updateNavigation();
+            
+            // Show home
+            showHome();
+        });
+
+        // Language selection
+        function selectLanguage(lang) {
+            selectedLanguage = lang;
+            localStorage.setItem('language', lang);
+            document.getElementById('languageModal').style.display = 'none';
+            applyLanguage();
+        }
+
+        function applyLanguage() {
+            const t = translations[selectedLanguage] || translations.en;
+            document.getElementById('heroTitle').textContent = t.heroTitle;
+            document.getElementById('heroSubtitle').textContent = t.heroSubtitle;
+        }
+
+        // Navigation updates
+        function updateNavigation() {
+            const userGreeting = document.getElementById('userGreeting');
+            const authBtn = document.getElementById('authBtn');
+            const logoutBtn = document.getElementById('logoutBtn');
+            const dashboardBtn = document.getElementById('dashboardBtn');
+
+            if (currentUser) {
+                userGreeting.classList.remove('hidden');
+                logoutBtn.classList.remove('hidden');
+                dashboardBtn.classList.remove('hidden');
+                authBtn.classList.add('hidden');
+                
+                document.getElementById('navUserName').textContent = currentUser.name;
+                if (currentUser.photo) {
+                    document.getElementById('navUserAvatar').src = currentUser.photo;
+                } else {
+                    document.getElementById('navUserAvatar').src = `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser.name)}&background=6366f1&color=fff`;
+                }
+            } else {
+                userGreeting.classList.add('hidden');
+                logoutBtn.classList.add('hidden');
+                dashboardBtn.classList.add('hidden');
+                authBtn.classList.remove('hidden');
+            }
+        }
+
+        // Auth functions
+        function showAuthModal() {
+            document.getElementById('authModal').classList.add('active');
+        }
+
+        function closeAuthModal() {
+            document.getElementById('authModal').classList.remove('active');
+        }
+
+        function handleAuth() {
+            const name = document.getElementById('authName').value.trim();
+            const phone = document.getElementById('authPhone').value.trim();
+            const role = document.getElementById('authRole').value;
+
+            if (!name) {
+                showToast('Please enter your name', 'error');
+                return;
+            }
+            if (!phone) {
+                showToast('Please enter your phone number', 'error');
+                return;
+            }
+
+            currentUser = {
+                id: Date.now(),
+                name: name,
+                phone: phone,
+                role: role,
+                photo: null
+            };
+            
+            // Add to users list
+            const existingUser = users.find(u => u.phone === phone);
+            if (!existingUser) {
+                users.push(currentUser);
+                localStorage.setItem('users', JSON.stringify(users));
+            }
+            
+            localStorage.setItem('currentUser', JSON.stringify(currentUser));
+            closeAuthModal();
+            updateNavigation();
+            showToast(`Welcome, ${name}!`, 'success');
+            
+            // Show appropriate dashboard
+            if (role === 'admin') {
+                showAdminInterface();
+            } else {
+                showDashboard();
+            }
+        }
+
+        function logout() {
+            currentUser = null;
+            localStorage.removeItem('currentUser');
+            updateNavigation();
+            showHome();
+            showToast('Logged out successfully', 'info');
+        }
+
+        // Section visibility
+        function hideAllSections() {
+            document.getElementById('heroSection').style.display = 'none';
+            document.getElementById('roleSelection').style.display = 'none';
+            document.getElementById('workerForm').style.display = 'none';
+            document.getElementById('userSearch').style.display = 'none';
+            document.getElementById('userDashboard').style.display = 'none';
+            document.getElementById('workerDashboard').style.display = 'none';
+            document.getElementById('adminInterface').style.display = 'none';
+        }
+
+        function showHome() {
+            hideAllSections();
+            document.getElementById('heroSection').style.display = 'block';
+            document.getElementById('roleSelection').style.display = 'grid';
+        }
+
+        function showWorkerForm() {
+            hideAllSections();
+            document.getElementById('workerForm').style.display = 'block';
+            initializeTimeSlots();
+        }
+
+        function showUserSearch() {
+            hideAllSections();
+            document.getElementById('userSearch').style.display = 'block';
+            document.getElementById('searchResults').innerHTML = `
+                <div class="empty-state" style="grid-column: 1/-1;">
+                    <div class="empty-state-icon">📍</div>
+                    <h3>Enter Your Location</h3>
+                    <p>Please enter your location or use GPS to find nearby service providers.</p>
+                </div>
+            `;
+        }
+
+        function showDashboard() {
+            if (!currentUser) {
+                showAuthModal();
+                return;
+            }
+            
+            hideAllSections();
+            
+            if (currentUser.role === 'admin') {
+                showAdminInterface();
+            } else if (currentUser.role === 'worker') {
+                showWorkerDashboard();
+            } else {
+                showUserDashboard();
+            }
+        }
+
+        function showUserDashboard() {
+            document.getElementById('userDashboard').style.display = 'block';
+            document.getElementById('userDisplayName').textContent = currentUser.name;
+            updateUserDashboardStats();
+            loadUserBookings();
+        }
+
+        function showWorkerDashboard() {
+            document.getElementById('workerDashboard').style.display = 'block';
+            document.getElementById('workerDisplayName').textContent = currentUser.name;
+            updateWorkerDashboardStats();
+            loadWorkerBookings();
+        }
+
+        function showAdminInterface() {
+            document.getElementById('adminInterface').style.display = 'block';
+            updateAdminStats();
+            showAdminTab('workers');
+        }
+
+        // Time slots initialization
+        function initializeTimeSlots() {
+            const container = document.getElementById('timeSlotsContainer');
+            const slots = ['08:00 AM', '09:00 AM', '10:00 AM', '11:00 AM', '12:00 PM', '02:00 PM', '03:00 PM', '04:00 PM', '05:00 PM', '06:00 PM'];
+            
+            container.innerHTML = slots.map(slot => `
+                <div class="slot-row">
+                    <input type="checkbox" class="slot-checkbox" id="slot_${slot.replace(/[: ]/g, '')}" onchange="toggleSlotPrice(this)">
+                    <label class="slot-time" for="slot_${slot.replace(/[: ]/g, '')}">${slot}</label>
+                    <input type="number" class="slot-price-input" id="price_${slot.replace(/[: ]/g, '')}" placeholder="₹/hr" disabled>
+                </div>
+            `).join('');
+        }
+
+        function toggleSlotPrice(checkbox) {
+            const priceInput = checkbox.parentElement.querySelector('.slot-price-input');
+            priceInput.disabled = !checkbox.checked;
+            if (!checkbox.checked) {
+                priceInput.value = '';
+            }
+        }
+
+        // Photo upload
+        function handlePhotoUpload(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const preview = document.getElementById('profilePhotoPreview');
+                    preview.innerHTML = `<img src="${e.target.result}" alt="Profile">`;
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        // Gender selection
+        function selectGender(element, gender) {
+            document.querySelectorAll('.gender-option').forEach(opt => opt.classList.remove('selected'));
+            element.classList.add('selected');
+            element.querySelector('input').checked = true;
+        }
+
+        // Service type change
+        function handleServiceTypeChange() {
+            const serviceType = document.getElementById('serviceType').value;
+            const otherContainer = document.getElementById('otherServiceContainer');
+            const teacherFields = document.getElementById('teacherFields');
+
+            if (serviceType === 'other') {
+                otherContainer.classList.remove('hidden');
+            } else {
+                otherContainer.classList.add('hidden');
+            }
+
+            if (serviceType === 'teacher') {
+                teacherFields.classList.remove('hidden');
+            } else {
+                teacherFields.classList.add('hidden');
+            }
+        }
+
+        // Subject toggle
+        function toggleSubject(element) {
+            element.classList.toggle('selected');
+        }
+
+        function addCustomSubject() {
+            const input = document.getElementById('customSubject');
+            const subject = input.value.trim();
+            if (subject) {
+                const container = document.getElementById('subjectTags');
+                const tag = document.createElement('span');
+                tag.className = 'subject-tag selected';
+                tag.textContent = subject;
+                tag.onclick = function() { this.classList.toggle('selected'); };
+                container.appendChild(tag);
+                input.value = '';
+            }
+        }
+
+        // Get current location
+        function getCurrentLocation() {
+            const mapContainer = document.getElementById('locationMap');
+            mapContainer.innerHTML = '<div class="loading"></div><span style="margin-left: 0.5rem;">Getting location...</span>';
+            
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        document.getElementById('latitude').value = position.coords.latitude;
+                        document.getElementById('longitude').value = position.coords.longitude;
+                        mapContainer.innerHTML = `
+                            <div style="text-align: center;">
+                                <div style="font-size: 2rem; margin-bottom: 0.5rem;">📍</div>
+                                <div style="font-weight: 600;">Location Captured!</div>
+                                <div style="font-size: 0.85rem; opacity: 0.8; margin-top: 0.25rem;">
+                                    Lat: ${position.coords.latitude.toFixed(4)}, Lng: ${position.coords.longitude.toFixed(4)}
+                                </div>
+                            </div>
+                        `;
+                        showToast('Location captured successfully!', 'success');
+                    },
+                    (error) => {
+                        mapContainer.innerHTML = '<span style="color: var(--danger);">❌ Unable to get location. Please enable GPS.</span>';
+                        showToast('Error: ' + error.message, 'error');
+                    },
+                    { enableHighAccuracy: true, timeout: 10000 }
+                );
+            } else {
+                showToast('Geolocation not supported', 'error');
+            }
+        }
+
+        // User location for search
+        function getUserLocation() {
+            const locationInput = document.getElementById('userLocationInput');
+            locationInput.value = 'Getting location...';
+            
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        userLocation = {
+                            lat: position.coords.latitude,
+                            lng: position.coords.longitude
+                        };
+                        locationInput.value = `Lat: ${position.coords.latitude.toFixed(4)}, Lng: ${position.coords.longitude.toFixed(4)}`;
+                        showToast('Location detected! Click Search.', 'success');
+                    },
+                    (error) => {
+                        locationInput.value = '';
+                        showToast('Error: ' + error.message, 'error');
+                    }
+                );
+            }
+        }
+
+        // Calculate distance
+        function calculateDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371;
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLon = (lon2 - lon1) * Math.PI / 180;
+            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                      Math.sin(dLon/2) * Math.sin(dLon/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return R * c;
+        }
+
+        // Register worker
+        function registerWorker(event) {
+            event.preventDefault();
+            
+            // Get selected slots
+            const selectedSlots = {};
+            document.querySelectorAll('.slot-checkbox:checked').forEach(checkbox => {
+                const timeLabel = checkbox.parentElement.querySelector('.slot-time').textContent;
+                const price = checkbox.parentElement.querySelector('.slot-price-input').value;
+                selectedSlots[timeLabel] = {
+                    available: true,
+                    price: parseInt(price) || parseInt(document.getElementById('serviceCost').value)
+                };
+            });
+
+            if (Object.keys(selectedSlots).length === 0) {
+                showToast('Please select at least one time slot', 'error');
+                return;
+            }
+
+            // Get service type
+            let serviceType = document.getElementById('serviceType').value;
+            if (serviceType === 'other') {
+                serviceType = document.getElementById('otherService').value.toLowerCase().trim();
+                if (!serviceType) {
+                    showToast('Please specify your service type', 'error');
+                    return;
+                }
+            }
+
+            // Get coordinates
+            let lat = parseFloat(document.getElementById('latitude').value);
+            let lng = parseFloat(document.getElementById('longitude').value);
+            
+            if (!lat || !lng) {
+                // Default to Delhi with random offset
+                lat = 28.6139 + (Math.random() - 0.5) * 0.2;
+                lng = 77.2090 + (Math.random() - 0.5) * 0.2;
+            }
+
+            // Get selected subjects for teachers
+            let subjects = [];
+            if (serviceType === 'teacher') {
+                document.querySelectorAll('#subjectTags .subject-tag.selected').forEach(tag => {
+                    subjects.push(tag.textContent);
+                });
+                if (subjects.length === 0) {
+                    showToast('Please select at least one subject', 'error');
+                    return;
+                }
+            }
+
+            // Get profile photo
+            let photo = null;
+            const photoPreview = document.getElementById('profilePhotoPreview');
+            if (photoPreview.querySelector('img')) {
+                photo = photoPreview.querySelector('img').src;
+            }
+
+            // Get gender
+            const gender = document.querySelector('input[name="gender"]:checked')?.value || 'male';
+
+            // Create worker object
+            const newWorker = {
+                id: Date.now(),
+                name: document.getElementById('workerName').value.trim(),
+                phone: document.getElementById('workerPhone').value.trim(),
+                service: serviceType,
+                cost: parseInt(document.getElementById('serviceCost').value),
+                address: document.getElementById('workerAddress').value.trim(),
+                latitude: lat,
+                longitude: lng,
+                slots: selectedSlots,
+                rating: 5.0,
+                reviews: 0,
+                gender: gender,
+                experience: parseInt(document.getElementById('experience').value) || 0,
+                verified: false, // Requires admin verification
+                available: true,
+                bio: document.getElementById('workerBio').value.trim(),
+                subjects: subjects,
+                teachingMode: document.getElementById('teachingMode')?.value || null,
+                photo: photo,
+                createdAt: new Date().toISOString()
+            };
+
+            // Add to workers array
+            workers.push(newWorker);
+            localStorage.setItem('workers', JSON.stringify(workers));
+            
+            showToast('Registration successful! Your profile is pending verification.', 'success');
+            
+            // Auto-login as worker
+            currentUser = {
+                id: newWorker.id,
+                name: newWorker.name,
+                phone: newWorker.phone,
+                role: 'worker',
+                photo: newWorker.photo,
+                workerId: newWorker.id
+            };
+            localStorage.setItem('currentUser', JSON.stringify(currentUser));
+            updateNavigation();
+            
+            // Reset form
+            document.getElementById('workerRegistrationForm').reset();
+            document.getElementById('profilePhotoPreview').innerHTML = '👤';
+            document.getElementById('otherServiceContainer').classList.add('hidden');
+            document.getElementById('teacherFields').classList.add('hidden');
+            initializeTimeSlots();
+            
+            setTimeout(() => {
+                showWorkerDashboard();
+            }, 1500);
+        }
+
+        // Search workers
+        function searchWorkers() {
+            const serviceType = document.getElementById('searchServiceType').value;
+            const maxDistance = parseInt(document.getElementById('maxDistance').value) || 10;
+            const sortBy = document.getElementById('sortBy').value;
+            const locationInput = document.getElementById('userLocationInput').value;
+            
+            if (!userLocation && !locationInput) {
+                showToast('Please enter your location or use GPS', 'error');
+                return;
+            }
+
+            // Use Delhi coordinates as fallback
+            const userLat = userLocation ? userLocation.lat : 28.6139;
+            const userLng = userLocation ? userLocation.lng : 77.2090;
+
+            let filtered = workers
+                .filter(w => w.available)
+                .map(worker => {
+                    const distance = calculateDistance(userLat, userLng, worker.latitude, worker.longitude);
+                    return { ...worker, distance: parseFloat(distance.toFixed(1)) };
+                });
+
+            // Filter by service type
+            if (serviceType !== 'all') {
+                filtered = filtered.filter(w => w.service === serviceType);
+            }
+
+            // Filter by distance
+            filtered = filtered.filter(w => w.distance <= maxDistance);
+
+            // Sort
+            filtered.sort((a, b) => {
+                switch(sortBy) {
+                    case 'distance': return a.distance - b.distance;
+                    case 'price_low': return a.cost - b.cost;
+                    case 'price_high': return b.cost - a.cost;
+                    case 'rating': return b.rating - a.rating;
+                    default: return a.distance - b.distance;
+                }
+            });
+
+            displaySearchResults(filtered);
+        }
+
+        function displaySearchResults(workersList) {
+            const container = document.getElementById('searchResults');
+            
+            if (workersList.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state" style="grid-column: 1/-1;">
+                        <div class="empty-state-icon">🔍</div>
+                        <h3>No providers found</h3>
+                        <p>Try adjusting your search criteria or expanding the search radius.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            const serviceIcons = {
+                electrician: '⚡', plumber: '🚿', teacher: '📚',
+                mechanic: '🔧', cleaner: '🧹', carpenter: '🪚',
+                painter: '🎨', gardener: '🌱', driver: '🚗',
+                chef: '👨‍🍳'
+            };
+
+            container.innerHTML = workersList.map(worker => {
+                const availableSlots = Object.entries(worker.slots || {})
+                    .filter(([slot, data]) => data.available)
+                    .map(([slot]) => slot);
+                
+                const avatarHtml = worker.photo 
+                    ? `<img src="${worker.photo}" alt="${worker.name}">`
+                    : serviceIcons[worker.service] || '👤';
+
+                return `
+                    <div class="worker-card" data-price="${worker.cost}">
+                        <div class="worker-header">
+                            <div class="badges">
+                                <div class="distance-badge">${worker.distance} km</div>
+                                ${worker.verified ? '<div class="verified-badge">✓ Verified</div>' : ''}
+                            </div>
+                            <div class="worker-avatar">${avatarHtml}</div>
+                            <div class="worker-name">${worker.name}</div>
+                            <div class="worker-service">${worker.service}</div>
+                        </div>
+                        <div class="worker-body">
+                            <div class="worker-info">
+                                <div class="info-row">
+                                    <div class="info-icon">📍</div>
+                                    <span>${worker.address}</span>
+                                </div>
+                                <div class="info-row">
+                                    <div class="info-icon">⭐</div>
+                                    <span class="rating-display">
+                                        <span class="stars">${'★'.repeat(Math.floor(worker.rating))}${'☆'.repeat(5 - Math.floor(worker.rating))}</span>
+                                        <span class="review-count">(${worker.reviews} reviews)</span>
+                                    </span>
+                                </div>
+                                <div class="info-row">
+                                    <div class="info-icon">💰</div>
+                                    <span class="price-tag">₹${worker.cost}/hr</span>
+                                </div>
+                                <div class="info-row">
+                                    <div class="info-icon">🕐</div>
+                                    <span>${availableSlots.length} slots available</span>
+                                </div>
+                                ${worker.experience ? `
+                                <div class="info-row">
+                                    <div class="info-icon">📊</div>
+                                    <span>${worker.experience} years experience</span>
+                                </div>
+                                ` : ''}
+                                ${worker.subjects && worker.subjects.length > 0 ? `
+                                <div class="info-row">
+                                    <div class="info-icon">📖</div>
+                                    <span>${worker.subjects.join(', ')}</span>
+                                </div>
+                                ` : ''}
+                            </div>
+                            
+                            <div class="worker-actions">
+                                <a href="tel:${worker.phone}" class="action-btn btn-call" title="Call">
+                                    📞 Call
+                                </a>
+                                <a href="https://wa.me/${worker.phone.replace(/[^0-9]/g, '')}" target="_blank" class="action-btn btn-whatsapp" title="WhatsApp">
+                                    💬 WhatsApp
+                                </a>
+                                <button class="action-btn btn-book" onclick="openBookingModal(${worker.id})" ${availableSlots.length === 0 ? 'disabled' : ''}>
+                                    ${availableSlots.length === 0 ? 'Fully Booked' : 'Book Now'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function filterByPrice(range) {
+            document.querySelectorAll('.filter-tag').forEach(tag => tag.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            const cards = document.querySelectorAll('.worker-card');
+            cards.forEach(card => {
+                const price = parseInt(card.dataset.price);
+                let show = true;
+                
+                switch(range) {
+                    case 'low': show = price < 500; break;
+                    case 'mid': show = price >= 500 && price <= 1000; break;
+                    case 'high': show = price > 1000; break;
+                    default: show = true;
+                }
+                
+                card.style.display = show ? 'block' : 'none';
+            });
+        }
+
+        // Booking modal
+        function openBookingModal(workerId) {
+            if (!currentUser) {
+                showAuthModal();
+                showToast('Please login to book services', 'info');
+                return;
+            }
+
+            const worker = workers.find(w => w.id === workerId);
+            if (!worker) return;
+
+            const availableSlots = Object.entries(worker.slots || {})
+                .filter(([slot, data]) => data.available)
+                .map(([slot, data]) => ({ slot, price: data.price }));
+            
+            const modal = document.getElementById('bookingModal');
+            const content = document.getElementById('bookingModalContent');
+            
+            content.innerHTML = `
+                <div style="margin-bottom: 1.5rem;">
+                    <h4 style="margin-bottom: 1rem; color: var(--dark);">Select Time Slot</h4>
+                    <div class="time-slots" id="bookingSlots" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 0.5rem;">
+                        ${availableSlots.map(s => `
+                            <div class="time-slot" onclick="selectBookingSlot(this, '${s.slot}', ${s.price})" style="padding: 0.75rem; border: 2px solid #e2e8f0; border-radius: 8px; text-align: center; cursor: pointer; transition: all 0.3s;">
+                                <div style="font-weight: 600;">${s.slot}</div>
+                                <div style="font-size: 0.85rem; color: var(--success);">₹${s.price}</div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+                
+                <div style="margin-bottom: 1.5rem;">
+                    <h4 style="margin-bottom: 0.5rem; color: var(--dark);">Your Location for Service</h4>
+                    <button type="button" class="btn btn-secondary" onclick="shareLocationForBooking()" style="width: 100%;">
+                        📍 Share Live Location
+                    </button>
+                    <div id="bookingLocation" style="margin-top: 0.5rem; font-size: 0.9rem; color: #64748b;"></div>
+                    <div class="form-group" style="margin-top: 1rem;">
+                        <input type="text" id="bookingAddress" placeholder="Or enter your address manually">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <h4 style="margin-bottom: 0.5rem; color: var(--dark);">Notes for Provider</h4>
+                    <textarea id="bookingNotes" rows="3" style="width: 100%; padding: 0.75rem; border: 2px solid #e2e8f0; border-radius: 8px;" placeholder="Describe your requirements..."></textarea>
+                </div>
+
+                <button class="btn btn-primary" onclick="confirmBooking(${workerId})" id="confirmBtn" disabled>
+                    Confirm Booking
+                </button>
+            `;
+            
+            modal.classList.add('active');
+            window.currentBookingWorker = workerId;
+        }
+
+        function selectBookingSlot(element, slot, price) {
+            document.querySelectorAll('#bookingSlots .time-slot').forEach(s => {
+                s.style.background = 'white';
+                s.style.borderColor = '#e2e8f0';
+                s.style.color = 'inherit';
+            });
+            element.style.background = 'var(--primary)';
+            element.style.borderColor = 'var(--primary)';
+            element.style.color = 'white';
+            
+            window.selectedBookingSlot = slot;
+            window.selectedBookingPrice = price;
+            document.getElementById('confirmBtn').disabled = false;
+        }
+
+        function shareLocationForBooking() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        const loc = `${position.coords.latitude.toFixed(4)}, ${position.coords.longitude.toFixed(4)}`;
+                        document.getElementById('bookingLocation').innerHTML = `
+                            <span style="color: var(--success);">✅ Location shared!</span><br>
+                            <a href="https://maps.google.com/?q=${position.coords.latitude},${position.coords.longitude}" target="_blank" style="color: var(--primary);">View on Map</a>
+                        `;
+                        window.bookingLocation = {
+                            lat: position.coords.latitude,
+                            lng: position.coords.longitude
+                        };
+                    },
+                    (error) => {
+                        showToast('Could not get location: ' + error.message, 'error');
+                    }
+                );
+            }
+        }
+
+        function confirmBooking(workerId) {
+            if (!window.selectedBookingSlot) {
+                showToast('Please select a time slot', 'error');
+                return;
+            }
+
+            const worker = workers.find(w => w.id === workerId);
+            if (!worker) return;
+
+            const slot = window.selectedBookingSlot;
+            const price = window.selectedBookingPrice;
+            
+            // Update worker's slot availability
+            if (worker.slots[slot]) {
+                worker.slots[slot].available = false;
+            }
+            
+            // Create booking
+            const booking = {
+                id: Date.now(),
+                workerId: workerId,
+                workerName: worker.name,
+                workerPhone: worker.phone,
+                userId: currentUser.id,
+                userName: currentUser.name,
+                service: worker.service,
+                slot: slot,
+                price: price,
+                date: new Date().toLocaleDateString(),
+                status: 'confirmed',
+                location: window.bookingLocation || null,
+                address: document.getElementById('bookingAddress').value || worker.address,
+                notes: document.getElementById('bookingNotes').value,
+                reviewed: false,
+                createdAt: new Date().toISOString()
+            };
+            
+            bookings.push(booking);
+            
+            // Save
+            localStorage.setItem('workers', JSON.stringify(workers));
+            localStorage.setItem('bookings', JSON.stringify(bookings));
+            
+            showToast(`Booking confirmed with ${worker.name} at ${slot}`, 'success');
+            closeBookingModal();
+            
+            // Refresh if on search page
+            if (document.getElementById('userSearch').style.display === 'block') {
+                searchWorkers();
+            }
+        }
+
+        function closeBookingModal(event) {
+            if (event && event.target !== event.currentTarget) return;
+            document.getElementById('bookingModal').classList.remove('active');
+            window.currentBookingWorker = null;
+            window.selectedBookingSlot = null;
+            window.bookingLocation = null;
+        }
+
+        // User Dashboard
+        function updateUserDashboardStats() {
+            const userBookings = bookings.filter(b => b.userId === currentUser.id);
+            document.getElementById('userTotalBookings').textContent = userBookings.length;
+            document.getElementById('userUpcoming').textContent = userBookings.filter(b => b.status === 'confirmed').length;
+            document.getElementById('userCompleted').textContent = userBookings.filter(b => b.status === 'completed').length;
+            
+            const uniqueWorkers = new Set(userBookings.map(b => b.workerId));
+            document.getElementById('userFavorites').textContent = uniqueWorkers.size;
+        }
+
+        function loadUserBookings() {
+            const container = document.getElementById('userBookingsList');
+            const userBookings = bookings.filter(b => b.userId === currentUser.id).reverse();
+            
+            if (userBookings.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📋</div>
+                        <p>No bookings yet. Start by searching for services!</p>
+                    </div>
+                `;
+                return;
+            }
+
+            const serviceIcons = {
+                electrician: '⚡', plumber: '🚿', teacher: '📚',
+                mechanic: '🔧', cleaner: '🧹', carpenter: '🪚',
+                painter: '🎨', gardener: '🌱', driver: '🚗',
+                chef: '👨‍🍳'
+            };
+
+            container.innerHTML = userBookings.map(booking => `
+                <div class="booking-item">
+                    <div class="booking-info">
+                        <h4>${serviceIcons[booking.service] || '🔧'} ${booking.workerName}</h4>
+                        <p>${booking.service} • ${booking.slot} • ${booking.date}</p>
+                        ${booking.notes ? `<p style="font-style: italic; margin-top: 0.25rem;">"${booking.notes}"</p>` : ''}
+                        ${booking.location ? `<a href="https://maps.google.com/?q=${booking.location.lat},${booking.location.lng}" target="_blank" style="font-size: 0.85rem; color: var(--primary);">📍 View Location</a>` : ''}
+                    </div>
+                    <div style="text-align: right;">
+                        <span class="booking-status status-${booking.status}">${booking.status}</span>
+                        <div style="margin-top: 0.5rem; font-weight: 700; color: var(--success);">₹${booking.price}</div>
+                        ${booking.status === 'completed' && !booking.reviewed ? `
+                        <button onclick="openReviewModal(${booking.id})" style="margin-top: 0.5rem; padding: 0.4rem 1rem; background: var(--gradient-1); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">
+                            ⭐ Give Review
+                        </button>
+                        ` : ''}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Worker Dashboard
+        function updateWorkerDashboardStats() {
+            const workerBookings = bookings.filter(b => b.workerId === currentUser.workerId);
+            const worker = workers.find(w => w.id === currentUser.workerId);
+            
+            document.getElementById('workerTotalBookings').textContent = workerBookings.length;
+            
+            const today = new Date().toLocaleDateString();
+            document.getElementById('workerTodayBookings').textContent = workerBookings.filter(b => b.date === today).length;
+            
+            if (worker) {
+                document.getElementById('workerRating').textContent = worker.rating.toFixed(1);
+                document.getElementById('workerReviews').textContent = worker.reviews;
+                
+                // Calculate earnings
+                const earnings = workerBookings.reduce((sum, b) => sum + (b.price || 0), 0);
+                document.getElementById('workerEarnings').textContent = earnings.toLocaleString();
+            }
+        }
+
+        function loadWorkerBookings() {
+            const container = document.getElementById('workerBookingsList');
+            const workerBookings = bookings.filter(b => b.workerId === currentUser.workerId).reverse();
+            
+            if (workerBookings.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📋</div>
+                        <p>No bookings yet. Your services will appear here once customers book you!</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = workerBookings.map(booking => `
+                <div class="booking-item">
+                    <div class="booking-info">
+                        <h4>👤 ${booking.userName || 'Customer'}</h4>
+                        <p>${booking.service} • ${booking.slot} • ${booking.date}</p>
+                        ${booking.address ? `<p style="margin-top: 0.25rem;">📍 ${booking.address}</p>` : ''}
+                        ${booking.notes ? `<p style="font-style: italic; margin-top: 0.25rem;">"${booking.notes}"</p>` : ''}
+                        ${booking.location ? `<a href="https://maps.google.com/?q=${booking.location.lat},${booking.location.lng}" target="_blank" style="font-size: 0.85rem; color: var(--primary);">📍 Navigate to Customer</a>` : ''}
+                    </div>
+                    <div style="text-align: right;">
+                        <span class="booking-status status-${booking.status}">${booking.status}</span>
+                        <div style="margin-top: 0.5rem; font-weight: 700; color: var(--success);">₹${booking.price}</div>
+                        ${booking.status === 'confirmed' ? `
+                        <div class="booking-actions" style="margin-top: 0.5rem;">
+                            <button onclick="markComplete(${booking.id})" style="padding: 0.4rem 1rem; background: var(--success); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">
+                                ✓ Complete
+                            </button>
+                        </div>
+                        ` : ''}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function markComplete(bookingId) {
+            const booking = bookings.find(b => b.id === bookingId);
+            if (booking) {
+                booking.status = 'completed';
+                localStorage.setItem('bookings', JSON.stringify(bookings));
+                showToast('Service marked as completed!', 'success');
+                loadWorkerBookings();
+                updateWorkerDashboardStats();
+            }
+        }
+
+        function toggleAvailability() {
+            const toggle = document.getElementById('availabilityToggle');
+            toggle.classList.toggle('active');
+            
+            const worker = workers.find(w => w.id === currentUser.workerId);
+            if (worker) {
+                worker.available = toggle.classList.contains('active');
+                localStorage.setItem('workers', JSON.stringify(workers));
+                showToast(worker.available ? 'You are now available for bookings' : 'You are now offline', 'info');
+            }
+        }
+
+        // Admin Interface
+        function updateAdminStats() {
+            document.getElementById('adminTotalUsers').textContent = users.length;
+            document.getElementById('adminTotalWorkers').textContent = workers.length;
+            document.getElementById('adminTotalBookings').textContent = bookings.length;
+            document.getElementById('adminPendingVerifications').textContent = workers.filter(w => !w.verified).length;
+        }
+
+        function showAdminTab(tab) {
+            document.querySelectorAll('.admin-tab').forEach(t => t.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            const header = document.getElementById('adminTableHeader');
+            const body = document.getElementById('adminTableBody');
+            
+            switch(tab) {
+                case 'workers':
+                    header.innerHTML = `
+                        <tr>
+                            <th>Name</th>
+                            <th>Service</th>
+                            <th>Phone</th>
+                            <th>Rating</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    `;
+                    body.innerHTML = workers.map(w => `
+                        <tr>
+                            <td>
+                                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                    ${w.photo ? `<img src="${w.photo}" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover;">` : '<div style="width: 32px; height: 32px; border-radius: 50%; background: #e2e8f0; display: flex; align-items: center; justify-content: center;">👤</div>'}
+                                    ${w.name}
+                                </div>
+                            </td>
+                            <td>${w.service}</td>
+                            <td>${w.phone}</td>
+                            <td>⭐ ${w.rating}</td>
+                            <td>
+                                <span class="verification-status ${w.verified ? 'verified' : 'pending'}">
+                                    ${w.verified ? '✓ Verified' : '⏳ Pending'}
+                                </span>
+                            </td>
+                            <td>
+                                ${!w.verified ? `<button onclick="verifyWorker(${w.id})" style="padding: 0.25rem 0.75rem; background: var(--success); color: white; border: none; border-radius: 6px; cursor: pointer; margin-right: 0.5rem;">Verify</button>` : ''}
+                                <button class="delete-btn" onclick="deleteWorker(${w.id})">Delete</button>
+                            </td>
+                        </tr>
+                    `).join('');
+                    break;
+                    
+                case 'users':
+                    header.innerHTML = `
+                        <tr>
+                            <th>Name</th>
+                            <th>Phone</th>
+                            <th>Role</th>
+                            <th>Actions</th>
+                        </tr>
+                    `;
+                    body.innerHTML = users.map(u => `
+                        <tr>
+                            <td>${u.name}</td>
+                            <td>${u.phone}</td>
+                            <td>${u.role}</td>
+                            <td><button class="delete-btn" onclick="deleteUser(${u.id})">Delete</button></td>
+                        </tr>
+                    `).join('');
+                    break;
+                    
+                case 'bookings':
+                    header.innerHTML = `
+                        <tr>
+                            <th>Customer</th>
+                            <th>Provider</th>
+                            <th>Service</th>
+                            <th>Slot</th>
+                            <th>Amount</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    `;
+                    body.innerHTML = bookings.map(b => `
+                        <tr>
+                            <td>${b.userName || 'N/A'}</td>
+                            <td>${b.workerName}</td>
+                            <td>${b.service}</td>
+                            <td>${b.slot}</td>
+                            <td>₹${b.price}</td>
+                            <td><span class="booking-status status-${b.status}">${b.status}</span></td>
+                            <td><button class="delete-btn" onclick="deleteBooking(${b.id})">Delete</button></td>
+                        </tr>
+                    `).join('');
+                    break;
+                    
+                case 'reviews':
+                    header.innerHTML = `
+                        <tr>
+                            <th>Customer</th>
+                            <th>Provider</th>
+                            <th>Rating</th>
+                            <th>Comment</th>
+                            <th>Date</th>
+                        </tr>
+                    `;
+                    body.innerHTML = reviews.map(r => `
+                        <tr>
+                            <td>${r.userName}</td>
+                            <td>${r.workerName}</td>
+                            <td>${'★'.repeat(r.rating)}${'☆'.repeat(5-r.rating)}</td>
+                            <td>${r.comment || 'No comment'}</td>
+                            <td>${r.date}</td>
+                        </tr>
+                    `).join('');
+                    break;
+            }
+        }
+
+        function verifyWorker(workerId) {
+            const worker = workers.find(w => w.id === workerId);
+            if (worker) {
+                worker.verified = true;
+                localStorage.setItem('workers', JSON.stringify(workers));
+                showToast(`${worker.name} has been verified`, 'success');
+                showAdminTab('workers');
+                updateAdminStats();
+            }
+        }
+
+        function deleteWorker(workerId) {
+            if (confirm('Are you sure you want to delete this worker?')) {
+                workers = workers.filter(w => w.id !== workerId);
+                localStorage.setItem('workers', JSON.stringify(workers));
+                showToast('Worker deleted', 'info');
+                showAdminTab('workers');
+                updateAdminStats();
+            }
+        }
+
+        function deleteUser(userId) {
+            if (confirm('Are you sure you want to delete this user?')) {
+                users = users.filter(u => u.id !== userId);
+                localStorage.setItem('users', JSON.stringify(users));
+                showToast('User deleted', 'info');
+                showAdminTab('users');
+                updateAdminStats();
+            }
+        }
+
+        function deleteBooking(bookingId) {
+            if (confirm('Are you sure you want to delete this booking?')) {
+                bookings = bookings.filter(b => b.id !== bookingId);
+                localStorage.setItem('bookings', JSON.stringify(bookings));
+                showToast('Booking deleted', 'info');
+                showAdminTab('bookings');
+                updateAdminStats();
+            }
+        }
+
+        // Review System
+        function openReviewModal(bookingId) {
+            currentReviewBooking = bookingId;
+            currentRating = 0;
+            document.querySelectorAll('.review-star').forEach(star => star.classList.remove('active'));
+            document.getElementById('reviewText').value = '';
+            document.getElementById('reviewModal').classList.add('active');
+        }
+
+        function closeReviewModal() {
+            document.getElementById('reviewModal').classList.remove('active');
+            currentReviewBooking = null;
+        }
+
+        function setRating(rating) {
+            currentRating = rating;
+            document.querySelectorAll('.review-star').forEach((star, index) => {
+                if (index < rating) {
+                    star.classList.add('active');
+                } else {
+                    star.classList.remove('active');
+                }
+            });
+        }
+
+        function submitReview() {
+            if (currentRating === 0) {
+                showToast('Please select a rating', 'error');
+                return;
+            }
+
+            const booking = bookings.find(b => b.id === currentReviewBooking);
+            if (!booking) return;
+
+            const worker = workers.find(w => w.id === booking.workerId);
+            if (!worker) return;
+
+            // Create review
+            const review = {
+                id: Date.now(),
+                bookingId: currentReviewBooking,
+                workerId: booking.workerId,
+                workerName: booking.workerName,
+                userId: currentUser.id,
+                userName: currentUser.name,
+                rating: currentRating,
+                comment: document.getElementById('reviewText').value.trim(),
+                date: new Date().toLocaleDateString()
+            };
+
+            reviews.push(review);
+            
+            // Update worker rating
+            const workerReviews = reviews.filter(r => r.workerId === booking.workerId);
+            const avgRating = workerReviews.reduce((sum, r) => sum + r.rating, 0) / workerReviews.length;
+            worker.rating = Math.round(avgRating * 10) / 10;
+            worker.reviews = workerReviews.length;
+            
+            // Mark booking as reviewed
+            booking.reviewed = true;
+            
+            // Save
+            localStorage.setItem('reviews', JSON.stringify(reviews));
+            localStorage.setItem('workers', JSON.stringify(workers));
+            localStorage.setItem('bookings', JSON.stringify(bookings));
+            
+            showToast('Thank you for your review!', 'success');
+            closeReviewModal();
+            loadUserBookings();
+        }
+
+        // Edit worker profile
+        function editWorkerProfile() {
+            showWorkerForm();
+            const worker = workers.find(w => w.id === currentUser.workerId);
+            if (worker) {
+                document.getElementById('workerName').value = worker.name;
+                document.getElementById('workerPhone').value = worker.phone;
+                document.getElementById('serviceType').value = worker.service;
+                document.getElementById('serviceCost').value = worker.cost;
+                document.getElementById('workerAddress').value = worker.address;
+                document.getElementById('workerBio').value = worker.bio || '';
+                document.getElementById('experience').value = worker.experience || '';
+                
+                if (worker.photo) {
+                    document.getElementById('profilePhotoPreview').innerHTML = `<img src="${worker.photo}" alt="Profile">`;
+                }
+            }
+        }
+
+        // Toast notifications
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            
+            const icons = {
+                success: '✅',
+                error: '❌',
+                info: 'ℹ️'
+            };
+            
+            toast.innerHTML = `
+                <span style="font-size: 1.2rem;">${icons[type]}</span>
+                <span>${message}</span>
+            `;
+            
+            container.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.style.animation = 'slideInRight 0.3s ease reverse';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
