@@ -1,1 +1,1 @@
-# smart-services-finders
+# smart-local-services-finders
